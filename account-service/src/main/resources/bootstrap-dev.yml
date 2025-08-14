@@ -6,6 +6,12 @@ spring:
       config:
         server-addr: localhost:8848 # localhost:8848, localhost:8858, localhost:8868
         # namespace: public  # Nacos配置中心的命名空间如果使用 public 则不能指定，否则会拉取不到配置
+        # 最初的设计就是public("") 而Id保持唯一性， 名字不保证唯一性，因此配置时需要配置id来保证能准确制定命名空间。
+        # 只是在1.1～1.2版本间，注册中心那边由社区引入了这个bug，输入public等同于输入""，配置中心则没有这个bug。
+        # 为了兼容部分已经在生产环境中使用的用户，注册中心那边保留了这个兼容，实际上是无奈之举。
+        # 如果需要配置中心也保持这个兼容，就需要更多的讨论了，毕竟这就导致public的命名空间变成了一个特殊的存在，
+        # 创建命名空间时，必须要校验是否输入了public。
+        # 原回答者GitHub用户KomachiSion
         group: ACCOUNT_GROUP
         prefix: ${spring.application.name}
         username: nacos
