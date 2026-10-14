@@ -1,3 +1,0 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-com.tqz.cloud.alibaba.component.sentinel.datasource.nacos.NacosWritableDataSourceInit,\
-com.tqz.cloud.alibaba.component.openai.OpenAiAutoConfiguration

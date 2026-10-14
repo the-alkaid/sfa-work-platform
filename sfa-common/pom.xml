@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<parent>
+<groupId>com.sfa</groupId>
+<artifactId>sfa-work-platform</artifactId>
+<version>1.0.0</version>
+<relativePath>../pom.xml</relativePath>
+</parent>
+<modelVersion>4.0.0</modelVersion>
+<artifactId>sfa-common</artifactId>
+<name>sfa-common</name>
+<description>公共模块：返回封装、DTO、枚举、工具类</description>
+<packaging>jar</packaging>
+<dependencies>
+<!-- lombok 简化实体类，optional=true 不传递依赖 -->
+<dependency>
+<groupId>org.projectlombok</groupId>
+<artifactId>lombok</artifactId>
+<optional>true</optional>
+</dependency>
+
+<!-- JJWT JWT工具依赖 -->
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-api</artifactId>
+    <version>0.11.5</version>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-impl</artifactId>
+    <version>0.11.5</version>
+    <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-jackson</artifactId>
+    <version>0.11.5</version>
+    <scope>runtime</scope>
+</dependency>
+</dependencies>
+</project>

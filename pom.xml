@@ -1,28 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    
-    <groupId>com.tqz.alibaba.cloud</groupId>
-    <artifactId>spring-cloud-alibaba-demo</artifactId>
+    <groupId>com.sfa</groupId>
+    <artifactId>sfa-work-platform</artifactId>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
-    <version>${revision}</version>
-    
+    <name>SFA工单与告警协同平台</name>
+
+    <!-- 删除cloud-bom模块！这个私有模块不存在 -->
     <modules>
-        <module>account-service</module>
-        <module>cloud-common</module>
-        <module>product-service</module>
-        <module>order-service</module>
-        <module>gateway-service</module>
-        <module>auth-service</module>
-        <module>cloud-bom</module>
-        <module>cloud-dubbo</module>
-        <module>cloud-dubbo/account-dubbo-api</module>
-        <module>cloud-dubbo/product-dubbo-api</module>
-        <module>cloud-component-starter</module>
+        <module>sfa-common</module>
+        <module>sfa-gateway</module>
+        <module>sfa-user-service</module>
+        <module>sfa-workorder-service</module>
+        <module>sfa-alarm-service</module>
+        
     </modules>
-    
+
     <properties>
         <revision>1.0.0</revision>
         <java.version>1.8</java.version>
@@ -33,20 +29,10 @@
         <spring-cloud.version>2021.0.4</spring-cloud.version>
         <spring-cloud-alibaba.version>2021.0.4.0</spring-cloud-alibaba.version>
     </properties>
-    
+
     <dependencyManagement>
         <dependencies>
-            
-            <!-- 项目BOM依赖 -->
-            <dependency>
-                <groupId>com.tqz.alibaba.cloud</groupId>
-                <artifactId>cloud-bom</artifactId>
-                <version>${project.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            
-            <!-- Spring Boot 父依赖 -->
+            <!-- SpringBoot 版本管理 -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
@@ -54,8 +40,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            
-            <!-- Spring Cloud 父依赖-->
+            <!-- Spring Cloud 原生版本管理 -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
@@ -63,8 +48,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            
-            <!-- Spring Cloud Alibaba 父依赖-->
+            <!-- Spring Cloud Alibaba 官方bom -->
             <dependency>
                 <groupId>com.alibaba.cloud</groupId>
                 <artifactId>spring-cloud-alibaba-dependencies</artifactId>
@@ -72,9 +56,47 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <!-- 统一管理内部子模块版本，子模块依赖sfa-common不再需要写version -->
+            <dependency>
+                <groupId>com.sfa</groupId>
+                <artifactId>sfa-common</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sfa</groupId>
+                <artifactId>sfa-gateway</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sfa</groupId>
+                <artifactId>sfa-user-service</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>3.5.3.1</version>
+            </dependency>
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>8.0.33</version>
+                <scope>runtime</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
-    
+    <build>
+    <pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring-boot.version}</version>
+            </plugin>
+        </plugins>
+    </pluginManagement>
+    </build>
     <profiles>
         <profile>
             <id>dev</id>
@@ -104,5 +126,4 @@
             </properties>
         </profile>
     </profiles>
-
 </project>

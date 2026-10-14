@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: sfa-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+    gateway:
+      routes:
+        - id: user-service-route
+          uri: lb://sfa-user-service
+          predicates:
+            - Path=/api/user/**
+        - id: workorder-service-route
+          uri: lb://sfa-workorder-service
+          predicates:
+            - Path=/api/workorder/**
+        - id: alarm-service-route
+          uri: lb://sfa-alarm-service
+          predicates:
+            - Path=/api/alarm/**
+
+
+jwt:
+  secret-key: MySecretKey1234567890MySecretKey1234567890
+server:
+  port: 8080

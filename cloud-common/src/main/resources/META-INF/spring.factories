@@ -1,3 +1,0 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.tqz.alibaba.cloud.common.autoconfig.SwaggerAutoConfiguration,\
-  com.tqz.alibaba.cloud.common.autoconfig.SpringContextHolderAutoConfiguration
