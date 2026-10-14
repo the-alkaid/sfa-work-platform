@@ -1,243 +1,77 @@
-### 一、Docker 部署环境
+# SFA 工单与告警协同平台
 
-#### 1. Mysql
+面向运维场景的微服务协同系统，打通告警上报与工单处置两套流程，实现高危告警自动生成处置工单、工单全生命周期状态反向同步告警，替代人工跨系统操作，保证两边数据一致性与处置时效性。
 
-1.1 拉取Mysql镜像
+## 核心功能
 
-```shell
-docker pull mysql:5.7
+- **正向自动建单**：P1 级高危告警上报后，自动触发生成对应处置工单，标题、描述、优先级自动同步，无需人工介入
+- **双向关联绑定**：告警与工单互相记录对方 ID，支持双向追溯，点开任意一侧都能定位对应业务数据
+- **反向状态同步**：工单分派、提交完成、验收关闭全流程节点，状态自动同步回对应告警，避免两边数据不一致
+- **异常降级保护**：跨服务调用异常时，不阻塞主业务流程，联动功能故障不影响告警上报与工单流转
+
+## 技术栈
+
+- **框架**：Spring Boot 2.6、Spring Cloud Alibaba
+- **服务治理**：Nacos 服务注册与发现
+- **跨服务调用**：Spring Cloud OpenFeign
+- **持久层**：MyBatis Plus + MySQL
+- **认证鉴权**：JWT + 网关统一鉴权
+- **构建工具**：Maven 多模块项目
+
+## 项目结构
+
+```
+sfa-work-platform
+├── sfa-common          # 公共依赖、通用工具、统一返回封装
+├── sfa-gateway         # 网关服务，统一入口、JWT鉴权、请求路由
+├── sfa-user-service    # 用户服务，账号管理、登录认证
+├── sfa-alarm-service   # 告警服务，告警接收、管理、自动触发规则
+├── sfa-workorder-service # 工单服务，工单全生命周期管理、状态同步
+└── pom.xml             # 父工程，统一版本管理
 ```
 
-1.2 运行
+## 本地启动
 
-```shell
-docker run -d --name mysql -p 5306:3306 -e MYSQL_ROOT_PASSWORD=123456 --privileged mysql:5.7
+### 前置依赖
+
+- JDK 1.8
+- Maven 3.6+
+- MySQL 5.7+
+- Nacos 2.1+
+
+### 启动步骤
+
+1. 启动 Nacos 注册中心，默认端口 8848
+2. 创建对应数据库，执行各模块的建表 SQL
+3. 修改各服务 `application.yml` 中的数据库地址、Nacos 地址
+> 
+> 数据库密码默认使用环境变量 `DB_PASSWORD`，未配置时默认 `root`
+4. 根目录执行公共模块安装：
+```
+mvn clean install
+```
+5. 按顺序启动各服务：
+   1. sfa-user-service（端口 8081）
+   2. sfa-alarm-service（端口 8083）
+   3. sfa-workorder-service（端口 8082）
+   4. sfa-gateway（端口 8080）
+
+### 默认测试账号
+
+```
+账号：admin
+密码：123456
 ```
 
-#### 2. Nacos
+## 核心验证流程
 
-2.1 拉取Nacos镜像
+1. 调用登录接口获取 Token
+2. 创建 P1 级告警，验证自动生成工单、双向 ID 绑定
+3. 分派、完成、关闭工单，验证关联告警状态自动同步更新
 
-```shell
-docker pull nacos/nacos-server:v2.1.0
-```
+## 配置说明
 
-2.2 运行
+敏感配置均支持环境变量注入，避免硬编码：
 
-```shell
-docker run -d --name nacos-server -p 8848:8848 -p 9848:9848 -p 9849:9849 -e MODE=standalone --privileged nacos/nacos-server:v2.1.0
-```
-
-如需使用mysql作为配置的持久化，进入容器中更改 `conf/application.properties`
-配置文件；如需开启鉴权，在该配置文件添加 `nacos.core.auth.enabled=true` 的配置。
-或者使用在运行命令里面添加参数更改配置，可参考官方文档：[https://nacos.io/zh-cn/docs/quick-start-docker.html](https://nacos.io/zh-cn/docs/quick-start-docker.html)
-
-2.3 Nacos官网：[https://nacos.io/zh-cn/](https://nacos.io/zh-cn/) ，
-github地址：[https://github.com/alibaba/nacos](https://github.com/alibaba/nacos)
-
-2.4 配置参考 scripts/nacos/readme.md 文件
-
-#### 3. Seata
-
-3.1 拉取Seata镜像
-
-```shell
-docker pull seataio/seata-server:1.5.2
-```
-
-3.2 运行
-
-```shell
-docker run -d --name seata-server -p 8091:8091 -p 7091:7091 -e SEATA_PORT=8091 seataio/seata-server:1.5.2
-```
-
-更改seata配置，进入容器中 docker exec -it seata-server sh， 更改 `resources/application.yml`
-配置文件，可使用nacos作为注册中心和配置中心。
-如果使用Nacos作为配置中心的话，需要把seata的配置文件在Nacos创建一份，同时seata-server端的
-application.yml 配置文件要和Nacos的namespace、dataId、group一致，
-该配置文件可拷贝：[https://github.com/seata/seata/blob/develop/script/config-center/config.txt](https://github.com/seata/seata/blob/develop/script/config-center/config.txt)
-， 同时修改该 `config.txt` 文件的配置，如使用mysql数据库作为存储的话，可修改 `store.db.xxx`
-属性，还有 `service.vgroupMapping.default_tx_group` 属性，
-该属性在 `config.txt` 文件默认值为 `default`，其他微服务也需要在nacos创建一份配置，例如account-service微服务，
-需要创建一个
-dataId为 `service.vgroupMapping.account_service_group` ，group为 `SEATA_GROUP`
-，配置文件值为 `default` ，
-account-service微服务配置文件需添加 `seata.tx-service-group=account_service_group`
-，同时该微服务需要配置seata注册中心的group、cluster，
-例如：`seata.registry.nacos.group=SEATA_GROUP` 和 `seata.registry.nacos.cluster=default`
-。同时seata-server端使用nacos为注册中心的集群名也要是 `default` ，
-seata该设计目的是作为资源隔离，不过该场景只是针对部署seata服务端集群来说有作用，目的是一个集群down了，客户端可以切换到其他集群去使用。
-
-3.3 Seata从1.5.0开始支持控制台，不过在官方发布的v1.5.1描述上说1.5.0有插件冲突问题，所以紧急发布了1.5.1版本，功能代码与1.5.0一致，
-详见[https://github.com/seata/seata/releases](https://github.com/seata/seata/releases)，
-启动后，登录 `http://localhost:7091/` 即可访问控制台
-
-3.4 Seata官网：[http://seata.io/zh-cn/](http://seata.io/zh-cn/) ，
-github地址：[https://github.com/seata/seata](https://github.com/seata/seata)
-
-3.5 配置参考 scripts/seata/readme.md 文件
-
-#### 4. Sentinel
-
-4.1 拉取
-
-```shell
-docker pull bladex/sentinel-dashboard:1.8.0
-```
-
-4.2 运行
-
-```shell
-docker run -d --name sentinel-dashboard -p 8858:8858 bladex/sentinel-dashboard:1.8.0
-```
-
-4.3 登录sentinel控制台，浏览器访问：http://localhost:8858 ，用户名和密码默认为 `sentinel` 。
-
-4.4 sentinel官网地址：[https://sentinelguard.io/zh-cn/docs/dashboard.html](https://sentinelguard.
-io/zh-cn/docs/dashboard.html)
-， github文档：[https://github.com/alibaba/Sentinel/wiki](https://github.com/alibaba/Sentinel/wiki)
-
-4.4 配置参考 scripts/sentinel/readme.md 文件
-
-#### 5.Elasticsearch
-
-在es的config目录下，打开 elasticsearch.yml 文件
-```yaml
-cluster.name: elk-application
-node.name: node-1
-network.host: 0.0.0.0
-http.port: 9200
-discovery.seed_hosts: ["127.0.0.1"]
-cluster.initial_master_nodes: ["node-1"]
-
-# 如果不想开启鉴权，可通过 xpack.security.enabled: false 配置关闭
-```
-
-然后在bin目录下启动elasticsearch脚本，启动成功后浏览器可访问 127.0.0.1:9200 ， 显示以下内容表示正常。 
-```json
-{
-    "name": "node-1",
-    "cluster_name": "my-application",
-    "cluster_uuid": "Oqloyq_vR5qYdqcDfqyLAA",
-    "version": {
-        "number": "8.6.1",
-        "build_flavor": "default",
-        "build_type": "zip",
-        "build_hash": "180c9830da956993e59e2cd70eb32b5e383ea42c",
-        "build_date": "2023-01-24T21:35:11.506992272Z",
-        "build_snapshot": false,
-        "lucene_version": "9.4.2",
-        "minimum_wire_compatibility_version": "7.17.0",
-        "minimum_index_compatibility_version": "7.0.0"
-    },
-    "tagline": "You Know, for Search"
-}
-```
-
-#### 6.Kibana
-
-修改config目录下的kibana.yml文件，
-```yaml
-# 端口
-server.port: 5601
-# 指定本机ip让外部能访问
-server.host: "0.0.0.0"
-# 请求数据指向的elasticsearch服务器
-elasticsearch.hosts: ["http://ip:9200"]
-# 中文汉化
-i18n.locale: "zh-CN" 
-```
-
-Kibana默认情况下也不允许使用root用户启动，你可以选择在启动命令后加上--allow-root参数，
-在bin目录下执行 kibana 脚本即可启动，启动成功后可访问 http://ip:5601。
-
-#### 7. LogStash
-
-在config中复制logstash-sample.conf为logstash.conf， 完整 `logstash.conf` 配置文件如下：
-
-```shell
-input {
-  beats {
-    port => 5044
-  }
-}
-
-input {
-  tcp {
-    #logstash需要使用tcp协议接受logstash传来的日志
-    port => 5064
-    codec => json_lines
-    type => "cloud_alibaba"
-  }
-}
-
-output {
-  # 如果不需要打印可以直接删除
-  stdout{
-    codec => rubydebug
-  }
-
-  # 通过type用于区分不同来源的日志
-  if [type] == "cloud_alibaba"{
-    elasticsearch {
-      hosts => ["http://localhost:9200"]
-	  # 索引不能使用大写字母
-      index => "%{[server-name]}-%{+YYYY.MM.dd}"
-      #user => "elastic"
-      #password => "changeMe"
-    }
-  }
-}
-```
-
-然后通过 ./logstash -f ../config/logstash.conf 启动。
-
-启动后端服务之后，通过logstash的启动面板可以看到日志已经传输到了ElasticSearch，并且已经使用服务名称作为索引名。
-
-在kibana上面点击Discover，然后点击`创建数据视图`，<img src="scripts/img/ELK1.png">
-然后输入索引名称和索引模式，
-索引名称可用服务名称-*，索引模式可使用**。
-<img src="scripts/img/ELK2.png">
-
-#### 8. Docker构建每个模块的微服务
-
-8.1 首先在 cloud-bom、cloud-common、account-dubbo-api、product-dubbo-api
-四个模块执行 `mvn clean install` 命令，否则打包不成功。
-
-8.2
-进入到每个微服务模块，执行该命令构建Docker镜像： `mvn clean install -P docker docker:build -DskipTests`。
-通过 `-P docker` 参数指定父pom里面定义的profile对应id。
-
-8.3
-根据Docker镜像创建容器，例如account-service微服务：`docker run -d --name account-service -p 8010:8010
-account-service`
-
-### 二、请求 auth-server 获取 access_token
-
-接口地址：http://localhost:8070/oauth/token
-在postman的 Body 里面，选择 form-data ，参数填写： grant_type:password, client_id:account-app,
-client_secret:111111, username:tqz,
-password:111111, scope:read。
-scope 不填的话默认获取所有。
-
-或者可在url后面追加参数 grant_type=password&username=tqz&password=111111&scope=read ，
-并在postman的 `Authorization` 里面选择Basic
-Auth，username填写account-app，password填写111111。
-
-将获取到的access_token去请求其他微服务，例如请求 account-service ，
-http://localhost:8010/account/getByCode?accountCode=tian ， 并在postman的 Headers
-里面添加key为 `Authorization`
-，value为 `Bearer 119be569-3923-4982-928f-f2000b6fde04` ， value要添加 `Bearer ` 前缀。
-
-网关服务添加了security之后，可访问网关 http://localhost:8050/account/getByCode?accountCode=tian ，
-同样在postman的 Headers
-里面添加key为 `Authorization` ，value为 `Bearer 119be569-3923-4982-928f-f2000b6fde04` ，
-value要添加 `Bearer `
-前缀。流程为请求到网关，网关服务首先在 `JdbcReactiveAuthenticationManager` 配置类里面判断该
-assecc_token 是否有效， assecc_token如果有效再去 `AccessManager`
-配置类里面判断是否有权限(目前返回true，所有都放行)，有权限再去请求后面微服务，
-网关分发请求到后端微服务(account-service、product-service、order-service等)，
-这些微服务依赖了oauth2之后，添加配置类 `ResourceServerConfig`，并使用注解 `@EnableResourceServer`
-表示该微服务为资源服务器，
-并且配置 `security.oauth2.resource.user-info-uri` 属性，该属性执行认证服务器 auth-server
-微服务提供的获取用户的接口。
+- `DB_PASSWORD`：数据库密码，默认 `root`
+- `NACOS_ADDR`：Nacos 地址，默认 `127.0.0.1:8848`
